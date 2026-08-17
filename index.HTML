@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Traffic Signal Management — Queue & Priority Queue System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --asphalt:#14181b;
+    --asphalt-2:#1d2226;
+    --lane-cream:#f5f2e9;
+    --ink:#14181b;
+    --muted:#6b7280;
+    --red:#e0323c;
+    --amber:#ffb400;
+    --green:#2fa84f;
+    --line-white:#eae6da;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--lane-cream);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    line-height:1.5;
+  }
+  h1,h2,h3,.display{
+    font-family:'Rajdhani',sans-serif;
+    text-transform:uppercase;
+    letter-spacing:0.03em;
+    font-weight:700;
+    margin:0;
+  }
+  .mono{font-family:'JetBrains Mono',monospace;}
+  a{color:inherit;}
+  .wrap{max-width:1120px;margin:0 auto;padding:0 28px;}
+
+  /* ---------- NAV ---------- */
+  nav{
+    position:sticky;top:0;z-index:50;
+    background:rgba(20,24,27,0.92);
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid rgba(255,255,255,0.08);
+  }
+  nav .wrap{
+    display:flex;align-items:center;justify-content:space-between;
+    height:64px;
+  }
+  .brand{display:flex;align-items:center;gap:10px;color:var(--lane-cream);}
+  .brand .display{font-size:19px;color:var(--lane-cream);}
+  .signal-mini{display:flex;flex-direction:column;gap:3px;padding:4px;background:#0d1012;border-radius:5px;}
+  .signal-mini span{width:8px;height:8px;border-radius:50%;display:block;background:#333;}
+  .signal-mini span:nth-child(1){background:var(--red);}
+  .signal-mini span:nth-child(2){background:var(--amber);opacity:0.35;}
+  .signal-mini span:nth-child(3){background:var(--green);opacity:0.35;}
+  nav ul{list-style:none;display:flex;gap:28px;margin:0;padding:0;}
+  nav ul li a{
+    color:#cfd3d6;text-decoration:none;font-size:14px;font-weight:500;
+    letter-spacing:0.02em;
+  }
+  nav ul li a:hover{color:var(--amber);}
+  nav ul li a:focus-visible{outline:2px solid var(--amber);outline-offset:4px;}
+
+  /* ---------- HERO ---------- */
+  header.hero{
+    background:
+      radial-gradient(ellipse at 20% -10%, rgba(47,168,79,0.18), transparent 55%),
+      radial-gradient(ellipse at 90% 0%, rgba(224,50,60,0.18), transparent 50%),
+      var(--asphalt);
+    color:var(--lane-cream);
+    padding:88px 0 64px;
+    position:relative;
+    overflow:hidden;
+    border-bottom:6px solid var(--asphalt-2);
+  }
+  header.hero::after{
+    content:"";
+    position:absolute;left:0;right:0;bottom:0;height:10px;
+    background:repeating-linear-gradient(90deg, var(--line-white) 0 34px, transparent 34px 60px);
+    opacity:0.5;
+  }
+  .hero-grid{
+    display:grid;grid-template-columns:1.15fr 0.85fr;gap:48px;align-items:center;
+  }
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:8px;
+    color:var(--amber);font-family:'JetBrains Mono',monospace;
+    font-size:12.5px;letter-spacing:0.08em;text-transform:uppercase;
+    margin-bottom:18px;
+  }
+  .eyebrow::before{content:"●";color:var(--green);}
+  h1.hero-title{font-size:clamp(34px,5vw,54px);line-height:1.04;color:var(--lane-cream);}
+  h1.hero-title em{font-style:normal;color:var(--amber);}
+  .hero-sub{
+    font-family:'Inter',sans-serif;text-transform:none;letter-spacing:0;
+    color:#b9bec2;font-size:16.5px;font-weight:400;margin-top:18px;max-width:46ch;
+  }
+  .hero-actions{display:flex;gap:14px;margin-top:30px;flex-wrap:wrap;}
+  .btn{
+    font-family:'Inter',sans-serif;font-weight:600;font-size:14.5px;
+    padding:13px 22px;border-radius:9px;border:1px solid transparent;
+    cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px;
+    transition:transform .15s ease, background .15s ease;
+  }
+  .btn:active{transform:scale(0.97);}
+  .btn-primary{background:var(--green);color:#082a12;}
+  .btn-primary:hover{background:#37bd5b;}
+  .btn-outline{border-color:rgba(245,242,233,0.35);color:var(--lane-cream);background:transparent;}
+  .btn-outline:hover{border-color:var(--amber);color:var(--amber);}
+
+  /* hero signal graphic */
+  .hero-signal{display:flex;justify-content:center;}
+  .pole{display:flex;flex-direction:column;align-items:center;}
+  .signal-box{
+    background:#0d1012;border-radius:16px;padding:16px;
+    display:flex;flex-direction:column;gap:14px;
+    box-shadow:0 20px 60px rgba(0,0,0,0.45);
+    border:1px solid rgba(255,255,255,0.06);
+  }
+  .lamp{
+    width:56px;height:56px;border-radius:50%;background:#22262a;
+    box-shadow:inset 0 3px 6px rgba(0,0,0,0.5);
+    transition:background .4s ease, box-shadow .4s ease;
+  }
+  .lamp.on-red{background:var(--red);box-shadow:0 0 34px 6px rgba(224,50,60,0.65);}
+  .lamp.on-amber{background:var(--amber);box-shadow:0 0 34px 6px rgba(255,180,0,0.65);}
+  .lamp.on-green{background:var(--green);box-shadow:0 0 34px 6px rgba(47,168,79,0.65);}
+  .pole-stick{width:8px;height:70px;background:linear-gradient(#3a3f43,#1b1e21);margin-top:-2px;}
+  .pole-base{width:46px;height:10px;background:#1b1e21;border-radius:3px;}
+
+  /* ---------- SECTIONS ---------- */
+  section{padding:84px 0;}
+  .section-tag{
+    font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--muted);
+    letter-spacing:0.08em;text-transform:uppercase;margin-bottom:10px;
+  }
+  h2.section-title{font-size:clamp(26px,3.4vw,36px);margin-bottom:18px;}
+  .section-lede{color:var(--muted);max-width:64ch;font-size:16px;margin-bottom:44px;}
+
+  /* overview */
+  .overview-grid{display:grid;grid-template-columns:1.1fr 0.9fr;gap:44px;align-items:start;}
+  .overview-grid p{color:#3a3f43;font-size:16px;margin:0 0 16px;}
+  .map-table{
+    background:var(--asphalt);color:var(--lane-cream);border-radius:var(--radius);
+    overflow:hidden;border:1px solid rgba(255,255,255,0.06);
+  }
+  .map-row{
+    display:grid;grid-template-columns:1fr 1.3fr;gap:2px;
+    padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.07);
+  }
+  .map-row:last-child{border-bottom:none;}
+  .map-row .k{font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--amber);text-transform:uppercase;letter-spacing:0.04em;}
+  .map-row .v{font-size:14px;color:#d6d9db;}
+  .map-head{padding:16px 20px;font-family:'Rajdhani',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:0.03em;background:rgba(255,255,255,0.04);font-size:14px;color:var(--green);}
+
+  /* features */
+  .feature-grid{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:20px;
+  }
+  .feature-card{
+    background:#fff;border:1px solid #e6e1d3;border-radius:var(--radius);
+    padding:26px 22px;position:relative;overflow:hidden;
+  }
+  .feature-card::before{
+    content:"";position:absolute;top:0;left:0;right:0;height:4px;
+  }
+  .feature-card.f-red::before{background:var(--red);}
+  .feature-card.f-amber::before{background:var(--amber);}
+  .feature-card.f-green::before{background:var(--green);}
+  .feature-card h3{font-size:18px;margin-bottom:10px;letter-spacing:0.01em;}
+  .feature-card p{color:var(--muted);font-size:14.5px;margin:0;}
+  .feature-icon{
+    width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;
+    margin-bottom:16px;font-size:18px;
+  }
+  .f-red .feature-icon{background:rgba(224,50,60,0.12);}
+  .f-amber .feature-icon{background:rgba(255,180,0,0.16);}
+  .f-green .feature-icon{background:rgba(47,168,79,0.12);}
+
+  /* how it works / simulation */
+  .sim-shell{
+    background:var(--asphalt);border-radius:20px;padding:36px;color:var(--lane-cream);
+    border:1px solid rgba(255,255,255,0.06);
+  }
+  .sim-controls{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:28px;}
+  .sim-btn{
+    font-family:'JetBrains Mono',monospace;font-size:13px;padding:10px 16px;border-radius:8px;
+    border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.04);color:var(--lane-cream);
+    cursor:pointer;transition:border-color .15s ease, background .15s ease;
+  }
+  .sim-btn:hover{border-color:var(--amber);}
+  .sim-btn.primary{background:var(--green);color:#082a12;border-color:var(--green);font-weight:600;}
+  .sim-btn.primary:hover{background:#37bd5b;}
+  .sim-btn.danger{background:var(--red);color:#2a0608;border-color:var(--red);font-weight:600;}
+  .sim-btn.danger:hover{background:#ef4b54;}
+
+  .intersection{
+    display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:14px;
+    margin-bottom:26px;
+  }
+  .lane{
+    background:#0d1012;border-radius:12px;padding:16px;border:2px solid transparent;
+    transition:border-color .3s ease, background .3s ease;
+    min-height:120px;
+  }
+  .lane.active-green{border-color:var(--green);background:#0f1c13;}
+  .lane-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .lane-name{font-family:'JetBrains Mono',monospace;font-size:12px;color:#9ba0a4;text-transform:uppercase;letter-spacing:0.06em;}
+  .lane-count{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--amber);}
+  .lane-queue{display:flex;gap:6px;flex-wrap:wrap;min-height:28px;align-items:center;}
+  .veh{
+    width:26px;height:18px;border-radius:4px;background:#4a90d9;flex:0 0 auto;
+    display:flex;align-items:center;justify-content:center;font-size:11px;
+  }
+  .veh.amb{background:var(--red);position:relative;}
+  .veh.amb::after{content:"+";color:#fff;font-weight:700;font-size:12px;}
+  .lane-empty{color:#5a5f63;font-size:12.5px;font-family:'JetBrains Mono',monospace;}
+
+  .sim-log{
+    background:#0d1012;border-radius:10px;padding:16px 18px;
+    height:150px;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:12.5px;
+    color:#a9d4b4;
+  }
+  .sim-log div{margin-bottom:6px;color:#c7cbce;}
+  .sim-log div.priority{color:var(--red);}
+  .sim-log div.pass{color:var(--green);}
+  .sim-log .tick{color:#5a5f63;margin-right:6px;}
+
+  .how-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:26px;}
+  .step{background:#fff;border:1px solid #e6e1d3;border-radius:12px;padding:20px;}
+  .step .n{font-family:'JetBrains Mono',monospace;color:var(--amber);font-size:12px;margin-bottom:8px;display:block;}
+  .step h4{margin:0 0 6px;font-family:'Rajdhani',sans-serif;font-weight:700;text-transform:uppercase;font-size:15px;letter-spacing:0.02em;}
+  .step p{margin:0;color:var(--muted);font-size:13.5px;}
+
+  footer{
+    background:var(--asphalt);color:#9ba0a4;padding:40px 0;
+    border-top:6px solid var(--asphalt-2);
+  }
+  footer .wrap{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
+  footer .display{color:var(--lane-cream);font-size:15px;}
+  footer .fine{font-family:'JetBrains Mono',monospace;font-size:12px;}
+
+  @media (max-width:860px){
+    .hero-grid{grid-template-columns:1fr;}
+    .hero-signal{order:-1;}
+    .overview-grid{grid-template-columns:1fr;}
+    .feature-grid{grid-template-columns:1fr 1fr;}
+    .intersection{grid-template-columns:1fr;}
+    .how-steps{grid-template-columns:1fr;}
+    nav ul{display:none;}
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important;}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <div class="brand">
+      <div class="signal-mini"><span></span><span></span><span></span></div>
+      <span class="display">SIGNAL.SYS</span>
+    </div>
+    <ul>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#features">Features</a></li>
+      <li><a href="#how-it-works">How It Works</a></li>
+    </ul>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="eyebrow">Data Structures Project · Queue &amp; Priority Queue</div>
+      <h1 class="hero-title">Smart Traffic <em>Signal</em> Management</h1>
+      <p class="hero-sub">A junction doesn't need machine learning to stop wasting your time at a red light &mdash; it needs the right data structure. This project models each lane as a queue, and lets a priority queue clear ambulances and fire trucks before anything else.</p>
+      <div class="hero-actions">
+        <a href="#how-it-works" class="btn btn-primary">Run the simulation</a>
+        <a href="#overview" class="btn btn-outline">Read the overview</a>
+      </div>
+    </div>
+    <div class="hero-signal">
+      <div class="pole">
+        <div class="signal-box">
+          <div class="lamp" id="heroLampRed"></div>
+          <div class="lamp" id="heroLampAmber"></div>
+          <div class="lamp" id="heroLampGreen"></div>
+        </div>
+        <div class="pole-stick"></div>
+        <div class="pole-base"></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section id="overview">
+  <div class="wrap">
+    <div class="section-tag">01 — Overview</div>
+    <h2 class="section-title">Every lane is a queue. Every emergency is a priority.</h2>
+    <p class="section-lede">Fixed-timer traffic signals treat every lane the same, whether it has two cars or twenty. This project replaces that fixed timer with a queue-driven controller: the busiest, most urgent lane gets served next &mdash; not just whichever lane is due.</p>
+
+    <div class="overview-grid">
+      <div>
+        <p>Each approach to the intersection (North, East, South, West) is modelled as a <strong>FIFO queue</strong> of arriving vehicles. Vehicles enter at the back and are cleared from the front, in the exact order they arrived &mdash; the same discipline real traffic follows.</p>
+        <p>Sitting above the four queues is a <strong>priority queue</strong> that decides which lane's signal turns green next. Under normal conditions, priority is driven by queue length &mdash; the more congested lane waits less. The moment an emergency vehicle joins any queue, it is pushed to the front of its lane and its lane is bumped to the top of the priority queue, overriding the normal rotation.</p>
+        <p>The result is a controller that stays fair under everyday traffic, but reacts instantly when it matters.</p>
+      </div>
+      <div class="map-table">
+        <div class="map-head">Concept → Real World</div>
+        <div class="map-row"><div class="k">Queue</div><div class="v">Vehicles waiting in one lane, served first-in-first-out</div></div>
+        <div class="map-row"><div class="k">Enqueue</div><div class="v">A car arrives and joins the back of its lane</div></div>
+        <div class="map-row"><div class="k">Dequeue</div><div class="v">A car crosses the junction when its lane is green</div></div>
+        <div class="map-row"><div class="k">Priority Queue</div><div class="v">Decides which lane gets the next green light</div></div>
+        <div class="map-row"><div class="k">Priority Key</div><div class="v">Queue length, boosted to max for emergency vehicles</div></div>
+        <div class="map-row"><div class="k">Preemption</div><div class="v">Ambulance / fire truck jumps to lane front + top priority</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="features" style="background:#efeade;">
+  <div class="wrap">
+    <div class="section-tag">02 — Features</div>
+    <h2 class="section-title">What the controller actually does</h2>
+    <p class="section-lede">Six behaviours, each backed directly by a queue or priority-queue operation &mdash; nothing here needs anything heavier.</p>
+
+    <div class="feature-grid">
+      <div class="feature-card f-green">
+        <div class="feature-icon">🟢</div>
+        <h3>Adaptive Green Time</h3>
+        <p>Green duration scales with how many vehicles are queued, so a full lane isn't cut off mid-flow and an empty one isn't held open.</p>
+      </div>
+      <div class="feature-card f-red">
+        <div class="feature-icon">🚑</div>
+        <h3>Emergency Override</h3>
+        <p>Ambulances and fire trucks are inserted at the front of their lane's queue and immediately promoted in the priority queue.</p>
+      </div>
+      <div class="feature-card f-amber">
+        <div class="feature-icon">⏱️</div>
+        <h3>Starvation Guard</h3>
+        <p>A waiting-time weight is folded into every lane's priority score, so a low-traffic lane can never be skipped forever.</p>
+      </div>
+      <div class="feature-card f-green">
+        <div class="feature-icon">🧭</div>
+        <h3>N-Way Junctions</h3>
+        <p>The lane-as-queue model isn't fixed to four arms &mdash; add a queue and a priority entry, and a 3-way or 5-way junction works the same way.</p>
+      </div>
+      <div class="feature-card f-red">
+        <div class="feature-icon">📊</div>
+        <h3>Live Queue Metrics</h3>
+        <p>Per-lane queue length, wait time, and clear rate are tracked in real time, so the scheduling decision is always visible, not a black box.</p>
+      </div>
+      <div class="feature-card f-amber">
+        <div class="feature-icon">🧮</div>
+        <h3>O(log n) Scheduling</h3>
+        <p>The priority queue is backed by a binary heap, so re-ranking four (or forty) lanes after every arrival stays fast.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="how-it-works">
+  <div class="wrap">
+    <div class="section-tag">03 — How It Works</div>
+    <h2 class="section-title">Try the queue and priority queue in action</h2>
+    <p class="section-lede">This is a live model of a 4-way junction. Add cars to build up ordinary FIFO queues, then send an ambulance and watch the priority queue preempt the rotation.</p>
+
+    <div class="sim-shell">
+      <div class="sim-controls">
+        <button class="sim-btn primary" id="btnAddCar">+ Add Car</button>
+        <button class="sim-btn danger" id="btnAddAmbulance">+ Add Ambulance</button>
+        <button class="sim-btn" id="btnAdvance">▶ Advance Signal Cycle</button>
+        <button class="sim-btn" id="btnReset">↺ Reset</button>
+      </div>
+
+      <div class="intersection" id="intersection">
+        <div class="lane" data-lane="North">
+          <div class="lane-head"><span class="lane-name">North Lane</span><span class="lane-count mono">0 waiting</span></div>
+          <div class="lane-queue"><span class="lane-empty">queue empty</span></div>
+        </div>
+        <div class="lane" data-lane="East">
+          <div class="lane-head"><span class="lane-name">East Lane</span><span class="lane-count mono">0 waiting</span></div>
+          <div class="lane-queue"><span class="lane-empty">queue empty</span></div>
+        </div>
+        <div class="lane" data-lane="South">
+          <div class="lane-head"><span class="lane-name">South Lane</span><span class="lane-count mono">0 waiting</span></div>
+          <div class="lane-queue"><span class="lane-empty">queue empty</span></div>
+        </div>
+        <div class="lane" data-lane="West">
+          <div class="lane-head"><span class="lane-name">West Lane</span><span class="lane-count mono">0 waiting</span></div>
+          <div class="lane-queue"><span class="lane-empty">queue empty</span></div>
+        </div>
+      </div>
+
+      <div class="sim-log" id="simLog">
+        <div><span class="tick">[0.0s]</span> Controller idle. Add vehicles, then advance the signal cycle.</div>
+      </div>
+    </div>
+
+    <div class="how-steps">
+      <div class="step">
+        <span class="n">01</span>
+        <h4>Enqueue on arrival</h4>
+        <p>Every new car calls <code>enqueue()</code> on its lane's queue. Ambulances call <code>enqueueFront()</code> instead, jumping every waiting car in that lane.</p>
+      </div>
+      <div class="step">
+        <span class="n">02</span>
+        <h4>Rank lanes by priority</h4>
+        <p>Before each cycle, all four lanes are pushed into a priority queue keyed by queue length &mdash; with any lane holding an ambulance forced to the top.</p>
+      </div>
+      <div class="step">
+        <span class="n">03</span>
+        <h4>Dequeue on green</h4>
+        <p>The top-priority lane turns green and calls <code>dequeue()</code>, clearing vehicles front-to-back until its turn ends, then the cycle repeats.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span class="display">SIGNAL.SYS</span>
+    <span class="fine">Data Structures Project · Queue + Priority Queue Traffic Controller</span>
+  </div>
+</footer>
+
+<script>
+(function(){
+  // ---------- Hero ambient signal cycle ----------
+  const heroLamps = {
+    red: document.getElementById('heroLampRed'),
+    amber: document.getElementById('heroLampAmber'),
+    green: document.getElementById('heroLampGreen')
+  };
+  const cycle = ['red','green','amber'];
+  let ci = 0;
+  function paintHero(){
+    Object.keys(heroLamps).forEach(k=>{
+      heroLamps[k].classList.remove('on-red','on-amber','on-green');
+    });
+    heroLamps[cycle[ci]].classList.add('on-'+cycle[ci]);
+  }
+  paintHero();
+  setInterval(()=>{
+    ci = (ci+1) % cycle.length;
+    paintHero();
+  }, 2200);
+
+  // ---------- Traffic simulation ----------
+  const laneNames = ['North','East','South','West'];
+  const lanes = {};
+  laneNames.forEach(n => lanes[n] = []); // each entry: {type:'car'|'amb'}
+
+  let activeLane = null;
+  let simTime = 0;
+  let vehicleCounter = 0;
+
+  const laneEls = {};
+  document.querySelectorAll('.lane').forEach(el=>{
+    laneEls[el.dataset.lane] = el;
+  });
+  const logEl = document.getElementById('simLog');
+
+  function log(msg, cls){
+    simTime += (Math.random()*0.6 + 0.4);
+    const line = document.createElement('div');
+    if(cls) line.className = cls;
+    line.innerHTML = '<span class="tick">[' + simTime.toFixed(1) + 's]</span> ' + msg;
+    logEl.appendChild(line);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function render(){
+    laneNames.forEach(name=>{
+      const el = laneEls[name];
+      const q = lanes[name];
+      el.classList.toggle('active-green', name === activeLane);
+      el.querySelector('.lane-count').textContent = q.length + ' waiting';
+      const queueEl = el.querySelector('.lane-queue');
+      queueEl.innerHTML = '';
+      if(q.length === 0){
+        const empty = document.createElement('span');
+        empty.className = 'lane-empty';
+        empty.textContent = 'queue empty';
+        queueEl.appendChild(empty);
+      } else {
+        q.forEach(v=>{
+          const d = document.createElement('div');
+          d.className = 'veh' + (v.type === 'amb' ? ' amb' : '');
+          queueEl.appendChild(d);
+        });
+      }
+    });
+  }
+
+  function pickRandomLane(){
+    return laneNames[Math.floor(Math.random()*laneNames.length)];
+  }
+
+  // priority queue selection: ambulance-holding lane wins outright,
+  // otherwise the lane with the longest queue wins (min-heap on -length)
+  function selectNextLane(){
+    const withAmb = laneNames.filter(n => lanes[n].some(v => v.type === 'amb'));
+    if(withAmb.length > 0){
+      // among ambulance lanes, longest queue first
+      return withAmb.sort((a,b)=> lanes[b].length - lanes[a].length)[0];
+    }
+    const nonEmpty = laneNames.filter(n => lanes[n].length > 0);
+    if(nonEmpty.length === 0) return null;
+    return nonEmpty.sort((a,b)=> lanes[b].length - lanes[a].length)[0];
+  }
+
+  document.getElementById('btnAddCar').addEventListener('click', ()=>{
+    const lane = pickRandomLane();
+    lanes[lane].push({type:'car', id: ++vehicleCounter});
+    log('Car #' + vehicleCounter + ' enqueued in <strong>' + lane + '</strong> lane.');
+    render();
+  });
+
+  document.getElementById('btnAddAmbulance').addEventListener('click', ()=>{
+    const lane = pickRandomLane();
+    lanes[lane].unshift({type:'amb', id: ++vehicleCounter});
+    log('🚑 Ambulance #' + vehicleCounter + ' entered <strong>' + lane + '</strong> lane — pushed to front of queue, lane escalated in priority queue.', 'priority');
+    render();
+  });
+
+  document.getElementById('btnAdvance').addEventListener('click', ()=>{
+    const next = selectNextLane();
+    if(next === null){
+      log('All queues empty — nothing to schedule.');
+      return;
+    }
+    activeLane = next;
+    render();
+    const cleared = lanes[next].shift();
+    if(cleared){
+      const label = cleared.type === 'amb' ? '🚑 Ambulance' : 'Car';
+      log(label + ' #' + cleared.id + ' dequeued and cleared through <strong>' + next + '</strong> junction (signal green).', 'pass');
+    }
+    render();
+  });
+
+  document.getElementById('btnReset').addEventListener('click', ()=>{
+    laneNames.forEach(n => lanes[n] = []);
+    activeLane = null;
+    simTime = 0;
+    vehicleCounter = 0;
+    logEl.innerHTML = '';
+    log('Controller reset. Add vehicles, then advance the signal cycle.');
+    render();
+  });
+
+  render();
+})();
+</script>
+
+</body>
+</html>
